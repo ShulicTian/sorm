@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+        
+<mapper namespace="shulictian.ssm.mapper.TopicMapper">
+
+		<resultMap type="topicCustom" id="getOneTop">
+        	<id column="id" property="id"/>
+        	<result column="title" property="title"/>
+        	<result column="text" property="text"/>
+        	<result column="readnum" property="readNum"/>
+        	<result column="comments" property="commentNum"/>
+        	<result column="type" property="type"/>
+        	<result column="genre" property="genre"/>
+        	<result column="sendTime" property="sendTime"/>
+        	<association property="user" javaType="user" select="shulictian.ssm.mapper.UserMapper.getUserById" column="user_id">
+        	</association>
+        </resultMap>
+        
+        <resultMap type="topicCustom" id="getSelfTop">
+        	<id column="id" property="id"/>
+     		<result column="title" property="title"/>
+        	<result column="text" property="text"/>
+        	<result column="readnum" property="readNum"/>
+        	<result column="comments" property="commentNum"/>
+        	<result column="type" property="type"/>
+        	<result column="genre" property="genre"/>
+        	<result column="sendTime" property="sendTime"/>
+        	<association property="userCus" javaType="userCustom" select="shulictian.ssm.mapper.UserMapper.findUser" column="user_id">
+        	</association>
+        </resultMap>
+        
+        <resultMap type="topic" id="adminTop">
+        	<id column="id" property="id"/>
+        	<result column="title" property="title"/>
+        	<result column="text" property="text"/>
+        	<result column="type" property="type"/>
+        	<result column="genre" property="genre"/>
+        	<result column="sendTime" property="sendTime"/>
+        	<association property="user" javaType="user" select="shulictian.ssm.mapper.UserMapper.getUserById" column="user_id">
+        	</association>
+        </resultMap>
+        
+        <!-- 储存帖子 -->
+        <insert id="saveTopic" parameterType="topic" useGeneratedKeys="true" keyProperty="id">
+        	insert into topic (title,text,user_id,genre,sendTime,type) value(#{title},#{text},#{user.id},#{genre},#{sendTime},#{type})
+        </insert>
+        
+        <!-- 储存草稿 -->
+        <insert id="saveDraft" parameterType="topic" useGeneratedKeys="true" keyProperty="id">
+        	insert into topic (title,text,user_id,genre,sendTime,type) value(#{title},#{text},#{user.id},#{genre},#{sendTime},#{type})
+        </insert>
+        
+        <!-- 创建对应帖子的状态记录 -->
+        <insert id="saveState" parameterType="map">
+        	insert into topstate (top_id,state) value(#{id},#{state})
+        </insert>
+        
+        <!-- 更新帖子的状态 -->
+        <update id="updateState" parameterType="map">
+        	update topstate set readnum=#{readnum} where top_id=#{topId}
+        </update>
+        
+        <!-- 获取user自发的帖子 -->
+        <select id="getUserTopic" parameterType="int" resultMap="getOneTop">
+        	select t.*,ts.readnum,ts.comments from topic t,topstate ts where t.user_id=#{id} and ts.state=1 and ts.top_id=t.id order by t.sendTime desc
+        </select>
+        
+        <!-- 根据id查找帖子 -->
+        <select id="getUserTopicById" parameterType="int" resultMap="getSelfTop">
+        	select t.*,ts.readnum,ts.comments from 
+        	topic t,topstate ts where t.id=#{id} and t.id=ts.top_id
+        </select>
+        
+        <!-- 搜索帖子 -->
+        <select id="soTop" parameterType="string" resultMap="getOneTop">
+        	select t.*,ts.readnum,ts.comments from topic t,topstate ts where ts.top_id=t.id and ts.state=1 and t.title like #{sele}
+        </select>
+        
+         <!-- 根据类型获取所有帖子 -->
+        <select id="getType" parameterType="int" resultMap="getOneTop">
+        	select t.*,ts.readnum,ts.comments from topic t,topstate ts where type=#{type} and ts.state=1 and ts.top_id=t.id order by t.sendTime desc
+        </select>
+                
+        <!-- 获取所有用户的帖子 -->
+        <select id="getTopsicByAudit" resultMap="getOneTop">
+        	select t.*,ts.readnum,ts.comments from topic t,topstate ts where ts.state=1 and ts.top_id=t.id order by t.sendTime desc
+        </select>
+        
+        <!-- 根据state与id获取此用户的帖子 -->
+        <select id="getTopByState" parameterType="map" resultType="topic">
+        	select t.* from topic t,topstate ts where t.user_id=#{id} and ts.state=#{state} and ts.top_id=t.id order by t.sendTime desc
+        </select>
+        
+        
+        
+        <!-- 更新帖子状态 -->
+        <update id="upTopStateByState" parameterType="map">
+        	update topstate set state=#{state} where top_id=#{topId}
+        </update>
+         <!-- 用户删除帖子到垃圾箱 -->
+        <update id="removeTop" parameterType="topicCustom">
+        	update topstate set state=2 where top_id=#{id}
+        </update>
+        <!-- 用户彻底删除帖子 -->
+        <update id="deleteTop" parameterType="topicCustom">
+        	update topstate set state=4 where top_id=#{id}
+        </update>
+        
+        
+        
+        <!-- 博主最新5条 -->
+        <select id="findNewTop" parameterType="int" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and t.user_id=#{userId} and ts.state=1 order by t.sendTime desc limit 0,5
+        </select>
+        
+        <!-- 博主最热5条 -->
+        <select id="findHotTop" parameterType="int" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and t.user_id=#{userId} and ts.state=1 order by ts.readnum,ts.comments desc limit 0,5
+        </select>
+        
+        <!-- 当前类型5条 -->
+        <select id="findNewTypeTop" parameterType="int" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and t.type=#{type} and ts.state=1 order by t.sendTime desc limit 0,5
+        </select>
+        
+        <!-- 相关5条 -->
+        <select id="findRelatedTop" parameterType="int" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and t.type=#{type} and ts.state=1 order by t.sendTime desc limit 0,5
+        </select>
+        
+        <!-- 所有最热5条 -->
+        <select id="findAllTopHot" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and ts.state=1 order by ts.readnum,ts.comments desc limit 0,5
+        </select>
+        
+        <!-- 所有最新5条 -->
+        <select id="findAllTopNew" resultType="topic">
+        	select t.id,t.title from topic t,topstate ts where t.id=ts.top_id and ts.state=1 order by t.sendTime desc limit 0,5
+        </select>
+        
+        <!-- 根据genre查询自己的帖子 -->
+        <select id="findTopByGenre" parameterType="map" resultMap="getOneTop">
+        	select t.*,ts.readnum,ts.comments from 
+        	topic t,topstate ts 
+        	where 
+        	ts.state=1 and 
+        	ts.top_id=t.id and 
+        	t.user_id=#{userId} and 
+        	t.genre=#{genre} 
+        	order by t.sendTime desc
+        </select>
+        
+</mapper>
