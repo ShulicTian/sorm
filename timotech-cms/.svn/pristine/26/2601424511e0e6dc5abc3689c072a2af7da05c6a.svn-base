@@ -1,0 +1,338 @@
+/*****************************************************
+ * Author  : wadecha
+ * Version : 1.0
+ * Date    :  2015/9/18
+ ****************************************************/
+
+var _ = require('lodash');
+var moment = require('moment');
+var async = require('async');
+var redis = require('redis');
+var i18n = require('../config/i18n_cn');
+var device_dao = require('../lib/dao/device_dao');
+var webConfig = require('../config/web_config');
+var RetJson = require('../proxy/retjson');
+var validator = require('../lib/common/validator_extend');
+var watchUtil = require('watch-util');
+var serviceClient = new watchUtil.ServiceClient(webConfig.service.host, webConfig.service.port);
+var opts = undefined;
+if (webConfig.redis.pwd) {
+	opts = {
+		'auth_pass': webConfig.redis.pwd
+	};
+}
+var redisClient = redis.createClient(webConfig.redis.port, webConfig.redis.host, opts);
+redisClient.on('error', function (err) {
+	console.log('redis error');
+});
+
+
+exports.log = function (req, res, next) {
+	res.render('device/log');
+};
+
+exports.watch = function (req, res, next) {
+	res.render('device/watch');
+};
+
+exports.device = function (req, res, next) {
+	res.render('device/device');
+};
+
+exports.sendCommand = function (req, res, next) {
+	var deviceId = req.body.udid;
+	var code = parseInt(req.body.type);
+	var content = JSON.parse(req.body.content);
+	redisClient.publish('m_device_command',
+			JSON.stringify({'deviceId': deviceId, 'code': code, 'body': content}),
+			function (err) {
+				if (err) {
+					res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+					return;
+				}
+				res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE));
+			});
+};
+
+exports.getLogList = function (req, res, next) {
+	var source = req.body.source ? req.body.source : 'ALL';
+	var logLevel = req.body.logLevel ? req.body.logLevel : 'ALL';
+	var timeChecked = req.body.timeChecked == 1 ? true : false;
+	var startDate = req.body.startDate ? req.body.startDate : '';
+	var endDate = req.body.endDate ? req.body.endDate : '';
+	var pageSize = validator.isNotZeroInt(req.body.rows) ? parseInt(req.body.rows) : webConfig.initPageSize;
+	var offSet = validator.isNotZeroInt(req.body.page) ? (parseInt(req.body.page) - 1) * pageSize : 0;
+
+	var clientKey = req.body.clientKey ? req.body.clientKey : '';
+	clientKey = _.filter(clientKey.split(' '), function (key) {
+		key = key.trim();
+		return key.length > 0;
+	});
+
+	if (timeChecked) {
+		if (!(validator.isDateTime(startDate) && validator.isDateTime(endDate))) {
+			res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.ADMIN_LOG_TIME_FORMAT_ERROR, []));
+			return;
+		}
+	}
+
+	device_dao.getLogList(logLevel, clientKey, source, timeChecked, startDate, endDate, offSet, pageSize, function (err, logResults) {
+		if (err) {
+			console.log(err);
+			res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+			return;
+		}
+		res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, logResults));
+	});
+};
+
+exports.exportLog = function (req, res, next) {
+	var source = req.query.source ? req.query.source : 'ALL';
+	var logLevel = req.query.logLevel ? req.query.logLevel : 'ALL';
+	var timeChecked = req.query.timeChecked == 1 ? true : false;
+	var startDate = req.query.startDate ? req.query.startDate : '';
+	var endDate = req.query.endDate ? req.query.endDate : '';
+
+
+	var clientKey = req.query.clientKey ? req.query.clientKey : '';
+	clientKey = _.filter(clientKey.split(' '), function (key) {
+		key = key.trim();
+		return key.length > 0;
+	});
+
+	device_dao.getExportLog(logLevel, clientKey, source, timeChecked, startDate, endDate, 500, function (err, logResults) {
+		if (err) {
+			console.log(err);
+			res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+			return;
+		}
+
+		var content = '';
+		logResults.forEach(function (log) {
+			content += log.createTime + '|' + log.key + '|' + log.logLevel + '|' + log.source + '|' + log.logContent + '\r\n';
+		});
+		res.set({
+			'Content-Type': 'application/octet-stream',
+			'Content-Disposition': 'attachment; filename=log.txt'
+		});
+		res.end(content);
+	});
+};
+
+exports.getDeviceList = function (req, res, next) {
+	var organID = req.body.organID;
+	var sn = req.body.SN ? validator.trim(req.body.SN) : '';
+    var pageSize = validator.isNotZeroInt(req.body.rows) ? parseInt(req.body.rows) : webConfig.initPageSize;
+    var offSet = validator.isNotZeroInt(req.body.page) ? (parseInt(req.body.page) - 1) * pageSize : 0;
+
+
+	function getCurrentOrganID(callback) {
+        callback(undefined, {organID: organID, offSet: offSet, pageSize: pageSize, SN: sn});
+	}
+
+	async.waterfall([
+		getCurrentOrganID,
+		device_dao.getDeviceList
+	], function (err, deviceData) {
+		if (err) {
+			console.log(err);
+			res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+			return;
+		}
+
+		res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, deviceData));
+	});
+};
+
+exports.unbind = function (req, res, next) {
+	var babyId = req.body.babyId;
+	serviceClient.invoke('baby/unBind', {
+		'memberId': 0,
+		'babyId': babyId
+	}, function (err) {
+		if (err) {
+			console.log(err);
+			res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+			return;
+		}
+
+		res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE));
+	});
+};
+
+/**
+ * SN查询 通讯录
+ */
+exports.getContact=function(req, res, next){
+	var babyId = req.body.babyId;
+
+    if(!babyId){
+        return res.send(RetJson.invalidParameter());
+    }else{
+
+		function getCurrentBabyID(callback) {
+			callback(undefined, {babyId:babyId});
+		}
+
+		async.waterfall([
+			getCurrentBabyID,
+			device_dao.getMembers
+		], function (err, deviceData) {
+			if(err){
+				res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+				return;
+			}
+            async.waterfall([
+                getCurrentBabyID,
+                device_dao.getBabiesOfMember
+            ], function (err1, deviceData1) {
+                if(err1){
+                    res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+                    return;
+                }
+                deviceData1.forEach(function(datas){
+                    deviceData.push({nickName:datas.name,phone:datas.phone,otherPhone:datas.otherPhone});
+				});
+                serviceClient.invoke('baby/getContactsOfBaby', {
+                    'babyId': babyId
+                }, function (err2, contacts) {
+                    if (err2) {
+                        return next(err2);
+                    }
+                    contacts.forEach(function(datas){
+                        deviceData.push({nickName:datas.nickName,phone:datas.phone,otherPhone:datas.otherPhone});
+                    });
+                    res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE,deviceData));
+                });
+            });
+		});
+    }
+}
+/**
+ *  SN查询 通话记录
+ */
+exports.getCallLog=function(req, res, next){
+    var babyId = req.body.babyId;
+    if (!babyId) {
+        return res.send(RetJson.invalidParameter());
+    }
+
+    serviceClient.invoke('baby/getCallLog',
+        {'babyId': babyId, 'tops': 100},
+        function (err, callLogs) {
+            if (err) {
+                return next(err);
+            }
+            res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE,callLogs));
+        });
+
+}
+/**
+ *  SN查询 课堂模式
+ */
+exports.getClassroom=function(req, res, next){
+
+    var babyId = req.body.babyId;
+    if (!babyId) {
+        return res.send(RetJson.invalidParameter());
+    }
+
+    serviceClient.invoke('baby/getScenes', {
+        'babyId': babyId
+    }, function (err, scenes) {
+        if (err) {
+            return next(err);
+        }
+        var scenesUpdate=[];
+        scenes.forEach(function(datas){
+            scenesUpdate.push({mode:datas.mode==0?mode==1?'(0) 非课堂模式':'(1) 静音模式':'(2) 免打扰模式'});
+		});
+        res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE,scenesUpdate));
+    });
+
+}
+/**
+ *  SN查询 闹钟
+ */
+exports.getAlarm=function(req, res, next){
+    var babyId = req.body.babyId;
+    if (!babyId) {
+        return res.send(RetJson.invalidParameter());
+    }
+
+    serviceClient.invoke('baby/getAlarms', {
+        'babyId': babyId
+    }, function (err, alarms) {
+        if (err) {
+            return next(err);
+        }
+
+        res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, alarms));
+    });
+}
+/**
+    *  SN查询 好友
+*/
+exports.getFriends=function(req, res, next){
+    var babyId = req.body.babyId;
+
+    if (!babyId) {
+        return res.send(RetJson.invalidParameter());
+    }
+    serviceClient.invoke('baby/getFriendsOfBaby',
+        {'babyId': babyId},
+        function (err, friends) {
+            if (err) {
+                return next(err);
+            }
+            var bindedFriends = _.filter(friends, function (friend) {
+                return friend.deviceId;
+            });
+            res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE,bindedFriends));
+        });
+}
+/**
+    *  SN查询 其他设置
+*/
+exports.getOther=function(req, res, next){
+	var babyId = req.body.babyId;
+
+	if(!babyId){
+        return res.send(RetJson.invalidParameter());
+	}else{
+        function getCurrentBabyID(callback) {
+            callback(undefined, {babyId:babyId});
+        }
+
+        async.waterfall([
+            getCurrentBabyID,
+            device_dao.getOther
+        ], function (err, deviceData) {
+            if (err) {
+                console.log(err);
+                res.send(new RetJson(i18n.SYS_ERROR_CODE, i18n.SYS_ERROR_MESSAGE, []));
+                return;
+            }
+            res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, deviceData));
+        });
+	}
+
+}
+// /**
+//  *  SN查询 定位模式
+//  */
+// exports.getGPS=function(req, res, next){
+//
+// }
+// /**
+//  *  SN查询 手表固件版本
+//  */
+// exports.getFirmware=function(req, res, next){
+//     res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, [{version:"M201"}]));
+// }
+// /**
+//  *  SN查询 自动接听开关状态
+//  */
+// exports.getStatus=function(req, res, next){
+//     res.send(new RetJson(i18n.SYS_SUCCESS_CODE, i18n.SYS_SUCCESS_MESSAGE, [{status:"开"}]));
+// }

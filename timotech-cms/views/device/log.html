@@ -1,0 +1,172 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'center',border:false">
+		<div id="toolbar" class="datagrid-toolbar" ms-controller="logCtrl" style="height: 26px; padding: 2px; ">
+			日志来源: <input class="easyui-combobox" id="logSource" style="width:120px" data-options="
+                valueField: 'key',
+                textField: 'value',
+                prompt: '请选择日志来源',
+                data: [
+                    { key: 'ALL', value: 'ALL' },
+                    { key: 'TIMOTECH-WATCH', value: 'TIMOTECH-WATCH' },
+					{ key: 'TIMOTECH-APP', value: 'TIMOTECH-APP' },
+					{ key: 'TIMOTECH-API', value: 'TIMOTECH-API' },
+					{ key: 'TIMOTECH-SERVICE', value: 'TIMOTECH-SERVICE' },
+                    { key: 'TIMOTECH-JOB', value: 'TIMOTECH-JOB' }
+                ]"/>
+			日志级别: <input class="easyui-combobox" id="logLevel" style="width:120px" data-options="
+                valueField: 'key',
+                textField: 'value',
+                prompt: '请选择日志级别',
+                data: [
+                    { key: 'ALL', value: 'ALL' },
+                    { key: 'DEBUG', value: 'DEBUG' },
+                    { key: 'INFO', value: 'INFO' },
+                    { key: 'WARN', value: 'WARN' },
+                    { key: 'ERROR', value: 'ERROR' },
+                    { key: 'FATAL', value: 'FATAL' }
+                ]"/>
+			客户端ID: <input class="easyui-textbox" prompt="" style="width:200px" name="clientKey" id="clientKey"/>
+			<input type="checkbox" id="chkboxTime" ms-duplex-checked="checked" data-duplex-changed="timeChecked" style=" vertical-align: middle"/><label ms-click="timeChecked('label')" style="margin-right: 5px;">时间筛选</label>
+			<input placeholder="开始时间" ms-attr-disabled="{{!checked}}" style="width:150px;vertical-align: middle; border: 1px solid #95B8E7; border-radius: 5px; padding: 3px;" id="txtStart"/>
+			<input placeholder="结束时间" ms-attr-disabled="{{!checked}}" style="width:150px;vertical-align: middle; border: 1px solid #95B8E7; border-radius: 5px; padding: 3px;" id="txtEnd"/>
+			<a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-search" ms-click="searchLogClick">
+				&nbsp;查询&nbsp;</a>
+			<a href="javascript:void(0)" class="easyui-linkbutton" iconCls="icon-print" ms-click="exportLogClick">
+				&nbsp;导出日志&nbsp;</a>
+		</div>
+		<table id="dgLog" rownumbers="true" nowrap="false" fit="true" width="95%" singleSelect="true">
+			<thead>
+			<tr>
+				<th field="createTime" width="8%">时间</th>
+				<th field="key" width="14%">客户端ID</th>
+				<th field="nodeID" width="3%">节点ID</th>
+				<th field="logLevel" width="3%">日志级别</th>
+				<th field="logType" width="4%">日志类型</th>
+				<th field="source" width="8%">日志来源</th>
+				<th field="module" width="11%">模块</th>
+				<th field="logContent" width="44%">日志内容</th>
+			</tr>
+			</thead>
+		</table>
+	</div>
+</div>
+<style type="text/css">
+	.datagrid-btable {
+		width: 100%;
+		word-break: break-all;
+	}
+</style>
+<script type="text/javascript">
+	var startTime = '';
+	var endTime = '';
+	var logModel = avalon.define("logCtrl", function (lg) {
+		lg.checked = false;
+
+		lg.timeChecked = function (_self) {
+			lg.checked = _self === 'label' ? !lg.checked : this.checked;
+		};
+
+		lg.searchLogClick = function () {
+			var startDate = $("#txtStart").val();
+			var endDate = $("#txtEnd").val();
+			var treg = /^((((1[6-9]|[2-9]\d)\d{2})-(0?[13578]|1[02])-(0?[1-9]|[12]\d|3[01]))|(((1[6-9]|[2-9]\d)\d{2})-(0?[13456789]|1[012])-(0?[1-9]|[12]\d|30))|(((1[6-9]|[2-9]\d)\d{2})-0?2-(0?[1-9]|1\d|2[0-8]))|(((1[6-9]|[2-9]\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))-0?2-29-)) (20|21|22|23|[0-1]?\d):[0-5]?\d:[0-5]?\d$/;
+			if (lg.checked) {
+				startDate = startDate + ":00";
+				endDate = endDate + ":00";
+				if (!treg.exec(startDate) || !treg.exec(endDate)) {
+					layerNoShadeAlert("您输入的时间格式不正确!");
+					return;
+				}
+			}
+
+			var model = {
+				clientKey: $("#clientKey").val(),
+				source: $("#logSource").combobox('getValue'),
+				logLevel: $("#logLevel").combobox('getValue'),
+				timeChecked: logModel.checked ? 1 : 0,
+				startDate: startDate,
+				endDate: endDate
+			};
+
+
+			$('#dgLog').datagrid('options').queryParams = model;
+			$('#dgLog').datagrid('reload');
+
+		};
+
+		lg.exportLogClick = function () {
+			var startDate = $("#txtStart").val();
+			var endDate = $("#txtEnd").val();
+			var treg = /^((((1[6-9]|[2-9]\d)\d{2})-(0?[13578]|1[02])-(0?[1-9]|[12]\d|3[01]))|(((1[6-9]|[2-9]\d)\d{2})-(0?[13456789]|1[012])-(0?[1-9]|[12]\d|30))|(((1[6-9]|[2-9]\d)\d{2})-0?2-(0?[1-9]|1\d|2[0-8]))|(((1[6-9]|[2-9]\d)(0[48]|[2468][048]|[13579][26])|((16|[2468][048]|[3579][26])00))-0?2-29-)) (20|21|22|23|[0-1]?\d):[0-5]?\d:[0-5]?\d$/;
+			if (lg.checked) {
+				startDate = startDate + ":00";
+				endDate = endDate + ":00";
+				if (!treg.exec(startDate) || !treg.exec(endDate)) {
+					layerNoShadeAlert("您输入的时间格式不正确!");
+					return;
+				}
+			}
+
+			$.messager.confirm('确认', '确定要导出日志吗？', function (confirm) {
+				if (confirm) {
+					var clientKey = $("#clientKey").val();
+					var source = $("#logSource").combobox('getValue');
+					var logLevel = $("#logLevel").combobox('getValue');
+					var href = '/device/exportLog?clientKey=' + clientKey + '&source=' + source + '&logLevel=' + logLevel +
+							'&timeChecked=' + (lg.checked ? '1' : '0') + '&startDate=' + startDate + '&endDate=' + endDate;
+					window.location.href = href;
+				}
+			});
+
+		};
+	});
+
+	$('#txtStart').datetimepicker({
+		format: 'Y-m-d H:i',
+		lang: 'ch',
+		step: 20,
+		value: startTime,
+		onShow: function (ct) {
+			this.setOptions({
+				maxDate: $('#txtEnd').val() ? $('#txtEnd').val() : false
+			})
+		}
+	});
+
+	$('#txtEnd').datetimepicker({
+		format: 'Y-m-d H:i',
+		lang: 'ch',
+		step: 20,
+		value: endTime,
+		onShow: function (ct) {
+			this.setOptions({
+				minDate: $('#txtStart').val() ? $('#txtStart').val() : false
+			})
+		}
+	});
+
+	function doSearch(value) {
+		$('#dgLog').datagrid('options').queryParams = {logLevel: 'ALL'};
+		$('#dgLog').datagrid('reload');
+	}
+
+	$('#dgLog').edatagrid({
+		url: '/device/getloglist',
+		loader: datagridLoader,
+		rownumbers: true,
+		pagination: true,
+		pageSize: 50,
+		toolbar: '#toolbar',
+		queryParams: {firstNotAjax: true}
+	});
+
+	var page = $('#dgLog').datagrid('getPager');
+	$(page).pagination({
+		pageSize: 50,
+		pageList: [50, 100, 200],
+		displayMsg: '当前显示 {from} - {to} 条记录 共 {total} 条记录',
+		beforePageText: '第',
+		afterPageText: '页 共 {pages} 页'
+	});
+
+</script>

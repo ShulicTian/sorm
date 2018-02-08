@@ -1,0 +1,187 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'center',border:false">
+		<% if (current_user.isAdmin) { %>
+		<div id="toolbar" class="datagrid-toolbar">
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-add" disabled="disabled" plain="true" onclick="insert()">添加</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-edit" disabled="disabled" plain="true" onclick="edit()">编辑</a>
+			</div>
+			<!--<div class="datagrid-btn-separator"></div>-->
+			<!--<div style="float: left"><a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-remove" disabled="disabled" plain="true" onclick="deleteRow()">移除</a></div>-->
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton actionbtn" disabled="disabled" iconCls="icon-save" plain="true" onclick="save()">保存</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton actionbtn" disabled="disabled" iconCls="icon-undo" plain="true" onclick="cancel()">取消</a>
+			</div>
+		</div>
+		<% } %>
+		<table id="treegd"></table>
+	</div>
+</div>
+<script type="text/javascript">
+
+	$('#treegd').treegrid({
+		url: '/admin/getorganlist',
+		loader: datagridLoader,
+		rownumbers: true,
+		collapsible: true,
+		singleSelect: true,
+		toolbar: '#toolbar',
+		idField: 'organID',
+		treeField: 'organName',
+		columns: [[
+			{title: '组织名', field: 'organName', width: 200, editor: {type: 'validatebox', options: {required: true}}},
+			{
+				title: '组织状态',
+				field: 'status',
+				width: 60,
+				formatter: statusFormatter,
+				editor: {type: 'checkbox', options: {on: 1, off: 0}}
+			},
+			{title: '路径', field: 'path', hidden: true}
+		]],
+		onAfterEdit: function (row, changes) {
+			if (JSON.stringify(changes) != '{}') {
+				postJSON("/admin/saveorgan", {jsonStrData: JSON.stringify(row)}, function (data) {
+					$('#treegd').treegrid('reload');
+					editingId = undefined;
+					rowStatus = undefined;
+//                    if (data.errcode === 0 && row.isnewrecord) {
+//                        //提示
+//                        $('#treegd').treegrid('update', { id: row.organID, row: { organID: data.retobj, path: row.path + data.retobj + ',' } });
+//                    }
+//                    //else{
+//                        //提示
+//                        //$('#treegd').treegrid('remove', row.organID);
+//                    //}
+//                    if (data.errcode === 0 && !row.isnewrecord) {
+//                        var childrow = $('#treegd').treegrid('getChildren', row.organID);
+//                        if(row.status == 0) {
+//                            for (var i = 0; i < childrow.length; i++) {
+//                                $('#treegd').treegrid('update', {id: childrow[i].organID, row: {status: 0}});
+//                            }
+//                        }
+//                    }
+				});
+			}
+		},
+		onClickRow: function (row) {
+			$(".opbtn").linkbutton('enable');
+		}
+	});
+
+	function endEditing() {
+		if (editingId == undefined) {
+			return true;
+		}
+		if ($('#treegd').datagrid('validateRow', editingId)) {
+			$('#treegd').datagrid('endEdit', editingId);
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	var editingId;
+	function deleteRow() {
+		if (editingId != undefined) {
+			$('#treegd').treegrid('select', editingId);
+			return;
+		}
+		var row = $('#treegd').treegrid('getSelected');
+		if (row) {
+			$('#treegd').treegrid('remove', row.organID);
+		}
+	}
+
+	function edit() {
+		if (editingId != undefined) {
+			$('#treegd').treegrid('select', editingId);
+			return;
+		}
+
+		var row = $('#treegd').treegrid('getSelected');
+		if (row) {
+			editingId = row.organID;
+			var parentRow = $('#treegd').treegrid('getParent', editingId);
+			if (parentRow) {
+				if (parentRow.status === 0) {
+					layerNoShadeAlert('您所选择的组织其父组织被禁用，无法编辑');
+					editingId = undefined;
+					return;
+				}
+			}
+
+			$('#treegd').treegrid('beginEdit', editingId);
+		}
+		$(".actionbtn").linkbutton('enable');
+	}
+
+	var rowStatus;
+	function insert() {
+		if (editingId != undefined) {
+			$('#treegd').treegrid('select', editingId);
+			return;
+		}
+
+
+		/**/
+		var rows = $('#treegd').treegrid('getChildren');
+		editingId = rows.length + 10000;
+		var row = null;
+		var _data = {organID: editingId, organName: "", status: 1, isnewrecord: true};
+		rowStatus = _data;
+		var _parentId = 0;
+		var row = $('#treegd').treegrid('getSelected');
+		_data.path = row.path;
+		if (row) {
+			$('#treegd').treegrid('expand', row.organID);
+			_parentId = row.organID;
+			var parentRow = $('#treegd').treegrid('find', _parentId);
+			if (parentRow.status === 0) {
+				layerNoShadeAlert('您所选择的组织其父组织被禁用，无法新增');
+				editingId = undefined;
+				return;
+			}
+		} else {
+			var root = $('#treegd').treegrid('getRoot');
+			_parentId = null;
+		}
+
+		$('#treegd').treegrid('append', {
+			parent: _parentId,  // 这里指定父级标识就可以了
+			data: [_data]
+		});
+		$('#treegd').treegrid('beginEdit', _data.organID);
+		$(".actionbtn").linkbutton('enable');
+	}
+
+	function save() {
+		if (editingId != undefined) {
+			if (endEditing()) {
+				var t = $('#treegd');
+				t.treegrid('endEdit', editingId);
+				editingId = undefined;
+
+				$(".actionbtn").linkbutton('disable');
+			}
+		}
+	}
+
+	function cancel() {
+		if (editingId != undefined) {
+			$('#treegd').treegrid('cancelEdit', editingId);
+			editingId = undefined;
+		}
+		if (rowStatus && rowStatus.isnewrecord) {
+			$('#treegd').treegrid('remove', rowStatus.organID);
+		}
+		$(".actionbtn").linkbutton('disable');
+	}
+</script>

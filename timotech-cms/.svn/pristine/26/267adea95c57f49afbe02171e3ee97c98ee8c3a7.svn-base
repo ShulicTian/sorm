@@ -1,0 +1,55 @@
+<div class="easyui-layout" fit="true" ms-controller="updatePswdCtrl">
+    <div class="easyui-panel" fit="true" style="width:100%; padding:30px 50px; box-sizing: content-box;">
+        <div style="margin-bottom:20px">
+            <span style="margin-right: 1em;">原始密码：</span><input type="password" class="easyui-textbox" ms-duplex="oldPswd" style="width:300px; height:32px;" />
+        </div>
+        <div style="margin-bottom:20px">
+            <span style="margin-right: 2em;">新密码：</span><input type="password" class="easyui-textbox" ms-duplex="newPswd" style="width:300px; height:32px;" />
+        </div>
+        <div style="margin-bottom:20px">
+            确认新密码：<input type="password" class="easyui-textbox" ms-duplex="confirmPswd" style="width:300px; height:32px;" />
+        </div>
+        <div style="margin-bottom:20px">
+            <a href="javascript:void(0)" class="easyui-linkbutton" ms-click="btnClick" style="width:250px; height:35px;margin-left:90px">&nbsp;确定&nbsp;</a>
+        </div>
+        <p id="importError" style="width: 100%; word-break:break-all;word-wrap:break-word"></p>
+    </div>
+</div>
+
+
+
+<script type="text/javascript">
+
+    var updatePswdModel = avalon.define("updatePswdCtrl", function(vm){
+        vm.userName = "";
+        vm.oldPswd = "";
+        vm.newPswd = "";
+        vm.confirmPswd = "";
+
+        vm.btnClick = function(){
+
+            if(!isLength(vm.oldPswd, 2) || !isLength(vm.newPswd, 2) || !isLength(vm.confirmPswd, 2)){
+                layerNoShadeAlert('您输入的密码格式不正确!');
+                return;
+            }
+
+            if(vm.newPswd !== vm.confirmPswd){
+                layerNoShadeAlert('您输入的新密码与确认密码不一致!');
+                return;
+            }
+
+            postJSON('/admin/saveupdatepswd', { oldPswd: vm.oldPswd, newPswd: vm.newPswd, confirmPswd: vm.confirmPswd }, function(data){
+                if(data.errcode !== 0){
+                    layerNoShadeAlert(data.errmsg);
+                    return;
+                }
+
+                vm.oldPswd = "";
+                vm.newPswd = "";
+                vm.confirmPswd = "";
+                layerNoShadeAlert('修改密码成功！')
+            });
+        }
+    });
+
+</script>
