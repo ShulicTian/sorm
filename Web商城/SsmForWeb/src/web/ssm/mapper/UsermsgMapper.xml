@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.ssm.mapper.UsermsgMapper">
+
+	<select id="getMsg" parameterType="int" resultType="usermsg">
+	
+		select * from usermsg where id=#{id}
+	
+	</select>
+	
+	<insert id="createMsg" parameterType="usermsg" keyProperty="id" useGeneratedKeys="true">
+		insert into usermsg(name,age,day,idCard,youslftext,user_id) value(#{name},#{age},#{day},#{idcard},#{youslftext},#{user.id})
+	</insert>
+	
+	<update id="setMsg" parameterType="usermsg">
+		update usermsg set name=#{name},age=#{age},day=#{day},idCard=#{idcard},youslftext=#{youslftext} where user_id=#{user.id}
+	</update>
+
+</mapper>
