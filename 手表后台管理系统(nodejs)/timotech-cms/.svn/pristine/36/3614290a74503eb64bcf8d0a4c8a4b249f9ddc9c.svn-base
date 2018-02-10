@@ -1,0 +1,118 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'west',title:'组织列表',split:true" style="width:200px;">
+		<table id="treegd"></table>
+	</div>
+	<div data-options="region:'center',border:false">
+		<div class="easyui-layout" fit="true">
+			<div data-options="region:'center',border:false">
+				<div id="toolbar" class="datagrid-toolbar" style="height: 26px; padding: 2px; ">
+					<div style="padding-top: 2px; text-indent: 5px;float: left">
+						<input id="snSearch" class="easyui-searchbox" searcher="doSearch" prompt="请输入SN号" style="width: 200px; "/>
+					</div>
+					<div class="datagrid-btn-separator" style="margin-left: 6px"></div>
+					<% if (current_user.isAdmin) { %>
+
+					<div style="float: left">
+						<a href="javascript:void(0)" class="easyui-linkbutton ubindDevice" iconCls="icon-redo" disabled="disabled" plain="true">解绑</a>
+					</div>
+					<% } %>
+				</div>
+				<table id="dgDevice" idField="sn" nowrap="false" rownumbers="true" singleSelect="true">
+					<thead>
+					<tr>
+						<th field="sn" width="200">SN</th>
+						<th field="organName" width="120">所属组织</th>
+						<th field="sw_version" width="80">设备版本</th>
+						<th field="iccid" width="150">ICCID</th>
+						<th field="babyId" width="100" formatter="bindFormatter">绑定状态</th>
+					</tr>
+					</thead>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	function bindFormatter(value, row) {
+		return row.babyId ? '已绑定' : '未绑定';
+	}
+
+	var currentOrganId;
+	var currentDevice;
+	var babyId;
+	$('#treegd').treegrid({
+		url: '/admin/getdisplayorganlist',
+		loader: datagridLoader,
+		collapsible: true,
+		singleSelect: true,
+		showHeader: false,
+		border: false,
+		rownumbers: true,
+		idField: 'organID',
+		treeField: 'organName',
+		columns: [[
+			{field: 'organName', width: 195}
+		]],
+		onClickRow: function (row) {
+			currentOrganId = row.organID;
+			doSearch($('#snSearch').searchbox('getValue'));
+		}
+	});
+
+	function doSearch(value) {
+		$('#dgDevice').datagrid('options').queryParams = {organID: currentOrganId, SN: (value ? value : '')};
+		$('#dgDevice').datagrid('reload');
+	}
+
+	$('#dgDevice').edatagrid({
+		url: '/device/getdevicelist',
+		loader: datagridLoader,
+		fit: true,
+		toolbar: '#toolbar',
+		pagination: true,
+		pageSize: 50,
+		onClickRow: function (index, row) {
+			currentDevice = row.sn;
+			babyId = row.babyId;
+			if (row.babyId) {
+				$(".ubindDevice").linkbutton('enable');
+			} else {
+				$(".ubindDevice").linkbutton('disable');
+			}
+		},
+		onLoadSuccess: function () {
+			$(this).datagrid("fixRownumber");
+			$(".ubindDevice").linkbutton('disable');
+		}
+	});
+
+	var page = $('#dgDevice').datagrid('getPager');
+	$(page).pagination({
+		pageSize: 50,
+		pageList: [20, 50, 100, 200],
+		displayMsg: '当前显示 {from} - {to} 条记录 共 {total} 条记录',
+		beforePageText: '第',
+		afterPageText: '页 共 {pages} 页'
+	});
+
+
+	$(function () {
+		$(".ubindDevice").click(function () {
+			if (currentOrganId && currentDevice) {
+				$.messager.confirm('提示', '是否将设备 ' + currentDevice + ' 解绑？', function (r) {
+					if (r) {
+						postJSON("/device/ubind", {babyId: babyId}, function (data) {
+							if (data.errcode === 0) {
+								layerNoShadeAlert('解绑成功！');
+								$('#dgDevice').datagrid('reload');
+							} else {
+								layerNoShadeAlert('解绑失败！');
+							}
+						});
+					}
+				});
+			}
+		});
+
+	});
+</script>

@@ -1,0 +1,141 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'west',title:'组织列表',split:true" style="width:200px;">
+		<table id="treegd"></table>
+	</div>
+	<div data-options="region:'center',border:false">
+		<% if (current_user.isAdmin) { %>
+		<div id="toolbar" class="datagrid-toolbar" style="height: 26px; padding: 2px; ">
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton actionbtn optionbtn addRowBtn" iconCls="icon-add" disabled="disabled" plain="true">添加</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton editbtn actionbtn" iconCls="icon-save" disabled="disabled" plain="true" onclick="javascript:$('#dgUser').edatagrid('saveRow')">保存</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton editbtn actionbtn" iconCls="icon-undo" disabled="disabled" plain="true" onclick="javascript:$('#dgUser').edatagrid('cancelRow')">取消</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton actionbtn resetBtn" iconCls="icon-lock" disabled="disabled" plain="true">重置密码</a>
+			</div>
+		</div>
+		<% } %>
+		<table id="dgUser" toolbar="#toolbar" idField="userID" rownumbers="true" singleSelect="true">
+			<thead>
+			<tr>
+				<th field="userName" width="120" editor="{ type: 'validatebox', options: { required: true }}">用户名</th>
+				<th field="realName" width="120" editor="text">真实姓名</th>
+				<th field="email" width="150" editor="text">邮箱</th>
+				<th field="phone" width="120" editor="text">手机</th>
+				<th field="roleID" width="120" formatter="roleFormatter" editor="{
+                    type:'combobox',
+                    options:{
+                        valueField: 'id',
+                        textField: 'name',
+                        data: [{ id: 1, name: '管理员' }, { id: 2, name: '普通' }],
+                        required: true
+                    }
+                }">角色
+				</th>
+				<th field="status" width="60" align="center" formatter="statusFormatter" editor="{ type: 'checkbox', options: { on: 1, off: 0 } }">
+					状态
+				</th>
+				<th field="createTime" width="150">创建时间</th>
+			</tr>
+			</thead>
+		</table>
+	</div>
+</div>
+<script type="text/javascript">
+	var isAdmin = '<%-current_user.isAdmin%>';
+	var currentOrganId;
+	var currentUserName;
+	$('#treegd').treegrid({
+		url: '/admin/getdisplayorganlist',
+		loader: datagridLoader,
+		collapsible: true,
+		singleSelect: true,
+		showHeader: false,
+		border: false,
+		idField: 'organID',
+		treeField: 'organName',
+		columns: [[
+			{field: 'organName', width: 195}
+		]],
+		onClickRow: function (row) {
+			currentOrganId = row.organID;
+			$(".optionbtn").linkbutton('enable');
+			postJSON("/admin/getuserlist", {organID: row.organID}, function (data) {
+				if (data.errcode === 0) {
+					$('#dgUser').datagrid({data: data.retobj});
+				}
+			});
+		}
+	});
+
+	$('#dgUser').edatagrid({
+		url: '',
+		rownumbers: true,
+		toolbar: '#toolbar',
+		onSave: function (index, row) {
+			postJSON("/admin/saveuser", {jsonStrData: JSON.stringify(row)}, function (data) {
+				if (data.errcode === 0 && row.isNewRecord) {
+					$('#dgUser').datagrid('updateRow', {index: index, row: {id: data.retobj}});
+				}
+				if (data.errcode === 1) {
+					$('#dgUser').datagrid('rejectChanges');
+				}
+				$.messager.alert('提示', data.errmsg);
+				$(".editbtn").linkbutton('disable');
+			});
+		},
+		onClickRow: function (index, row) {
+			if ((isAdmin == 'false')) {
+				$('#dgUser').edatagrid('disableEditing');
+			}
+
+			currentUserName = row.userName;
+			$(".resetBtn").linkbutton('enable');
+		},
+		onEdit: function () {
+			$(".editbtn").linkbutton('enable');
+		},
+		onCancelEdit: function () {
+			$(".editbtn").linkbutton('disable');
+		}
+	});
+
+	$(function () {
+		$(".addRowBtn").click(function () {
+			$(".editbtn").linkbutton('enable');
+			$('#dgUser').edatagrid('addRow', {
+				row: {
+					status: 1,
+					createTime: (new Date()).format('yyyy-MM-dd hh:mm:ss'),
+					organID: currentOrganId
+				}
+			});
+		});
+
+		$(".resetBtn").click(function () {
+			if (currentOrganId && currentUserName) {
+				$.messager.confirm('提示', '是否确定重置此选中用户 ' + currentUserName + ' 的密码为123456？', function (r) {
+					if (r) {
+						postJSON("/admin/resetpassword", {
+							organID: currentOrganId,
+							userName: currentUserName
+						}, function (data) {
+							if (data.errcode === 0) {
+								$.messager.alert('提示', data.errmsg);
+							}
+						});
+					}
+				});
+			}
+		});
+	});
+
+
+</script>

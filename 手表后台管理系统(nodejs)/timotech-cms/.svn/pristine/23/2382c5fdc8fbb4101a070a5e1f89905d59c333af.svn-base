@@ -1,0 +1,123 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'center',border:false">
+		<% if (current_user.isAdmin) { %>
+		<div id="toolbar" class="datagrid-toolbar">
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-add" plain="true" onclick="insert()" src="/resource/test">添加</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-edit" disabled="disabled" plain="true" onclick="edit()">编辑</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-remove" disabled="disabled" plain="true" onclick="deleteRow()">删除</a>
+			</div>
+		</div>
+		<% } %>
+		<table id="audios">
+			<thead>
+				<tr>
+					<th field="resourceId" width="150">主题ID</th>
+					<th field="version">版本</th>
+					<th field="url" width="400">URL</th>
+					<th field="previewUrl" width="400">PreviewURL</th>
+					<th field="tag" width="100">标签</th>
+					<th field="size">大小</th>
+				</tr>
+			</thead>
+		</table>
+	</div>
+</div>
+<div id="dlg" class="easyui-dialog" style="width: 400px; height: 300px;margin:auto;padding: 10px 20px;"
+	 closed="true" buttons="#dlg-buttons">
+	<form id="fm" method="post">
+		<div style="margin-top:10px;margin-left:57px;"><label>音频ID&nbsp;&nbsp;&nbsp;</label><input name="resourceId" class="easyui-textbox tbinput1" id="resourceId" required="true"/></div>
+		<div style="margin-top:10px;margin-left:69px;"><label>版本&nbsp;&nbsp;&nbsp;</label><input name="version" class="easyui-textbox tbinput2" required="true"/></div>
+		<div style="margin-top:10px;margin-left:70px;"><label>URL&nbsp;&nbsp;&nbsp;</label><input name="url" class="easyui-textbox tbinput3" required="true"/></div>
+		<div style="margin-top:10px;margin-left:26px;"><label>PreviewURL&nbsp;&nbsp;&nbsp;</label><input name="previewUrl" class="easyui-textbox tbinput4" required="true"/></div>
+		<div style="margin-top:10px;margin-left:69px;"><label>标签&nbsp;&nbsp;&nbsp;</label><input name="tag" class="easyui-textbox tbinput5" required="true"/></div>
+		<div style="margin-top:10px;margin-left:69px;"><label>大小&nbsp;&nbsp;&nbsp;</label><input name="size" class="easyui-textbox tbinput6" required="true"/></div>
+	</form>
+</div>
+
+<div id="dlg-buttons">
+	<<div class="datagrid-btn-separator"></div>
+	<div style="float: left;margin-left:125px;">
+		<a href="javascript:void(0)" class="easyui-linkbutton actionbtn"  iconCls="icon-save" plain="true" onclick="save()">保存</a>
+	</div>
+	<div class="datagrid-btn-separator"></div>
+	<div style="float: left">
+		<a href="javascript:void(0)" class="easyui-linkbutton actionbtn"  iconCls="icon-undo" plain="true" onclick="cancel()">取消</a>
+	</div>
+</div>
+<script type="text/javascript">
+
+	$('#audios').edatagrid({
+		url: '/resource/getThemes',
+		loader: datagridLoader,
+        fit: true,
+		onClickRow: function (index,row) {
+		    var resourceId = row.resourceId;
+            var url = row.url;
+            var version = row.version;
+            var previewUrl = row.previewUrl;
+            var tag = row.tag;
+            var size = row.size;
+			$(".opbtn").linkbutton('enable');
+            $('#audios').datagrid('options').queryParams = {
+                resourceId: resourceId,
+                url:url,
+                version:version,
+                previewUrl:previewUrl,
+                tag:tag,
+                size:size,
+				resourceName:"theme"
+            };
+		}
+	});
+
+	function deleteRow() {
+        $.messager.confirm('确认', '确定删除吗？', function (confirm) {
+            if (confirm) {
+                var args = $('#audios').datagrid('options').queryParams;
+                $.post("/resource/deleteDialAndTheme",args,function(){$('#audios').datagrid("reload");});
+            }
+        });
+	}
+
+	function edit() {
+        $("#resourceId").textbox("textbox").attr('disabled',true);;
+        var row = $("#audios").datagrid("getSelected");
+        $("#fm").form("load",row);
+        $("#dlg").dialog("open").dialog('setTitle', '编辑');
+	}
+
+	function insert() {
+        $("#fm").children("div").children("input").textbox('setValue',null);
+        $("#resourceId").textbox("textbox").attr('disabled',false);;
+        $("#dlg").dialog("open").dialog('setTitle', '添加');
+    }
+
+	function save() {
+	    var title=$(".panel-title").html();
+        var args={"resourceId":$(".tbinput1").textbox('getValue'),
+            "version":$(".tbinput2").textbox('getValue'),
+            "url":$(".tbinput3").textbox('getValue'),
+            "previewUrl":$(".tbinput4").textbox('getValue'),
+            "tag":$(".tbinput5").textbox('getValue'),
+            "size":$(".tbinput6").textbox('getValue'),
+        	"resourceName":"theme"};
+	    if(title=="编辑"){
+            $.post("/resource/updateDialAndTheme",args,function(){$('#audios').datagrid("reload");});
+		}else{
+            $.post("/resource/saveDialAndTheme",args,function(){$('#audios').datagrid("reload");});
+		}
+        $("#dlg").dialog("close");
+
+	}
+
+	function cancel() {
+        $("#dlg").dialog("close");
+	}
+</script>

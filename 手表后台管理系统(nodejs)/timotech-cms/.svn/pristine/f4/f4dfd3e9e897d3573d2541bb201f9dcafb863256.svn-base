@@ -1,0 +1,116 @@
+/**
+ * Created by Administrator on 2015/10/8.
+ */
+var async = require('async');
+var moment = require('moment');
+var mongoDB = require('../common/mongo_pool');
+var mysqlDao = require('../common/mysql_pool');
+
+exports.getLogList = function (logLevel, keys, source, timeChecked, startDate, endDate, offSet, pageSize, callback) {
+	var col = mongoDB.collection('log');
+	var condition = {$and: []};
+	if (logLevel != 'ALL') {
+		condition.$and.push({logLevel: logLevel});
+	}
+
+	if (source != 'ALL') {
+		condition.$and.push({source: source.trim()});
+	}
+
+	if (timeChecked) {
+		condition.$and.push({createTime: {$gte: new Date(startDate), $lt: new Date(endDate)}});
+	}
+	//console.log("condition-->" + JSON.stringify(condition));
+	if (keys && keys.length > 0) {
+		var keyCon = {$or: []};
+		condition.$and.push(keyCon);
+		keys.forEach(function (key) {
+			keyCon.$or.push({key: new RegExp('^' + key.trim())});
+		});
+	}
+
+	if (condition.$and.length == 0) {
+		condition = {};
+	}
+
+	function tranformResult(err, results) {
+		var countResult = (results && results.length > 0) ? results[0] : 0;
+		var logResults = (results[1] ? results[1] : []);
+		logResults.forEach(function (log) {
+			log.createTime = moment(log.createTime).format('YYYY-MM-DD HH:mm:ss');
+		});
+
+		callback(err, {total: countResult, rows: logResults});
+	}
+
+	var tasks = [];
+	tasks.push(function (callback2) {
+		col.count(condition, callback2);
+	});
+	tasks.push(function (callback2) {
+		col.findItems(condition, {skip: offSet, limit: pageSize, sort: [['createTime', -1]]}, callback2);
+	});
+
+	async.parallel(
+			tasks,
+			tranformResult
+	);
+};
+
+
+exports.getExportLog = function (logLevel, keys, source, timeChecked, startDate, endDate, limit, callback) {
+	var col = mongoDB.collection('log');
+	var condition = {$and: []};
+	if (logLevel != 'ALL') {
+		condition.$and.push({logLevel: logLevel});
+	}
+
+	if (source != 'ALL') {
+		condition.$and.push({source: source.trim()});
+	}
+
+	if (timeChecked) {
+		condition.$and.push({createTime: {$gte: new Date(startDate), $lt: new Date(endDate)}});
+	}
+	//console.log("condition-->" + JSON.stringify(condition));
+	if (keys && keys.length > 0) {
+		var keyCon = {$or: []};
+		condition.$and.push(keyCon);
+		keys.forEach(function (key) {
+			keyCon.$or.push({key: new RegExp('^' + key.trim())});
+		});
+	}
+
+	if (condition.$and.length == 0) {
+		condition = {};
+	}
+
+	function tranformResult(err, results) {
+		var logResults = results[0];
+		logResults.forEach(function (log) {
+			log.createTime = moment(log.createTime).format('YYYY-MM-DD HH:mm:ss');
+		});
+
+		callback(err, logResults);
+	}
+
+	var tasks = [];
+	tasks.push(function (callback2) {
+		col.findItems(condition, {skip: 0, limit: limit, sort: [['createTime', -1]]}, callback2);
+	});
+
+	async.parallel(
+			tasks,
+			tranformResult
+	);
+};
+
+exports.getDeviceList = function (query, callback) {
+	var sql = "select  t.udid as sn,t.iccid,t.sw_version,o.organName,p.babyId " +
+			"from t_device t join t_organ o on t.organId = o.id " +
+			"left join t_device_baby p on t.udid = p.deviceId " +
+			"where o.path like concat('%,', :organID, ',%') " +
+			(query.SN ? " and t.udid=:SN" : "");
+	mysqlDao.executeListForPagination(sql, query, callback);
+};
+

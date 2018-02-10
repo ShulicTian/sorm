@@ -1,0 +1,119 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'center',border:false">
+
+		<div class="easyui-panel" fit="true" style="width:100%; padding:30px 50px; "
+		     data-options="region:'center',border:false">
+
+			<h1 style="font-size: large;margin:10px 225px">手表协议测试</h1>
+			<ul>
+				<li style="margin-bottom: 10px">
+					<label style="font-size: medium;margin-left: 70px">udid：</label>
+					<input type="text" class="easyui-textbox" style="width:300px; height:32px;" name="udid"
+					       id="udid" value="" required/>
+				</li>
+				<li style="margin-bottom: 10px">
+					<label style="font-size: medium;margin-left: 70px">type：</label>
+					<input type="text" class="easyui-textbox" style="width:300px; height:32px;" name="type"
+					       id="type" value="" required/>
+				</li>
+
+				<li style="margin-bottom: 10px">
+					<label style="font-size: medium;margin-left: 45px">content：</label>
+					<input type="text" class="easyui-textbox" data-options="multiline:true"
+					       style="width:300px; height:300px;" name="content"
+					       id="content" value=""/>
+				</li>
+
+				<li style="margin-bottom: 10px">
+					<button type="submit" class="easyui-linkbutton" iconCls="icon-ok"
+					        style="margin-left: 152px;height: 40px;width: 90px" id="btn">
+						发送
+					</button>
+				</li>
+
+
+			</ul>
+		</div>
+
+	</div>
+
+	<p id="message"></p>
+
+
+</div>
+
+
+<script>
+
+
+	$('#btn').click(function () {
+
+		var udid = $.trim($('#udid').textbox('getValue'));
+		var type = $.trim($('#type').textbox('getValue'));
+		var content = $.trim($('#content').textbox('getValue'));
+
+		if (udid.length == 0 || type.length == 0) {
+			layerNoShadeAlert('请完善信息！');
+			return;
+		}
+
+		if (!$.isNumeric(type)) {
+			layerNoShadeAlert('type 必须是正整数');
+			return;
+		}
+
+		if (content.length > 0) {
+			try {
+				content = JSON.parse(content);
+			} catch (err) {
+				layerNoShadeAlert('content 必须是JSON 字符串');
+				return;
+			}
+		}
+
+
+		$.messager.confirm('确认', '确定发送吗？', function (confirm) {
+			if (confirm) {
+				postJSON('/device/sendCommand', {
+					'udid': udid,
+					'type': parseInt(type),
+					'content': JSON.stringify(content)
+				}, function (data) {
+					if (data.errcode === 0) {
+						layerNoShadeAlert('发送成功！');
+					} else {
+						layerNoShadeAlert('发送失败！');
+					}
+				});
+			}
+
+		});
+	});
+
+</script>
+
+<style type="text/css">
+	.textbox .textbox-text {
+		font-size: 17px;
+	}
+
+	.fileinput-button {
+		position: relative;
+		overflow: hidden;
+		margin: 0;
+	}
+
+	.fileinput-button input {
+		position: absolute;
+		top: 0;
+		right: 0;
+		margin: 0;
+		opacity: 0;
+		filter: alpha(opacity=0);
+		transform: translate(-300px, 0) scale(4);
+		font-size: 23px;
+		direction: ltr;
+		cursor: pointer;
+	}
+</style>
+

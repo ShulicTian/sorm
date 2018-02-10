@@ -1,0 +1,208 @@
+<div class="easyui-layout" fit="true">
+	<div data-options="region:'center',border:false">
+		<div id="toolbar2" class="datagrid-toolbar" style="height: 26px; padding: 2px; ">
+			<% if (current_user.isAdmin) { %>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-add" plain="true" onclick="insert()">添加</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-edit" disabled="disabled" plain="true" onclick="edit()">编辑</a>
+			</div>
+			<div class="datagrid-btn-separator"></div>
+			<div style="float: left">
+				<a href="javascript:void(0)" class="easyui-linkbutton opbtn" iconCls="icon-remove" disabled="disabled" plain="true" onclick="deleteRow()">删除</a>
+			</div>
+			<% } %>
+		</div>
+		<table id="dgUpdate" nowrap="false" rownumbers="true" singleSelect="true">
+			<thead>
+				<tr>
+					<input type="hidden" name="id"/>
+					<th field="version" width="100px">版本</th>
+					<th field="wVersion" width="100px">Watch版本</th>
+					<th field="modifyDesc" width="300px">ModifyDesc</th>
+					<th field="updateDesc" width="300px">UpdateDesc</th>
+					<th field="updatePreTip" width="300px">UpdatePreTip</th>
+					<th field="updatingTip" width="250px">UpdatingTip</th>
+					<th field="failureTip" width="250px">FailureTip</th>
+				</tr>
+			</thead>
+		</table>
+	</div>
+</div>
+<div id="dlg" class="easyui-dialog" style="width: 45%; height: 86%;margin:auto;"
+     closed="true" buttons="#dlg-buttons">
+	<table id="tb">
+		<thead>
+			<tr style="height:7%;">
+				<th><label>版本</label></th>
+				<th><input name="version" class="tbinput2" required="true" style="height:85%;"/></th>
+			</tr>
+			<tr style="height:7%;">
+				<th>Watch版本</th>
+				<th><input name="wVersion" class="tbinput1" required="true" style="height:85%;"/></th>
+			</tr>
+			<tr>
+				<th>ModifyDesc</th>
+				<th><textarea name="modifyDesc" class="tbinput3" required="true" style="height:93%;"></textarea></th>
+			</tr>
+			<tr>
+				<th>UpdateDesc</th>
+				<th><textarea name="updateDesc" class="tbinput6" required="true" style="height:93%;"></textarea></th>
+			</tr>
+			<tr>
+				<th>UpdatePreTip</th>
+				<th><textarea name="updatePreTip" class="tbinput5" required="true" style="height:93%;"></textarea></th>
+			</tr>
+			<tr>
+				<th>UpdatingTip</th>
+				<th><textarea name="updatingTip" class="tbinput4" required="true" style="height:93%;"></textarea></th>
+			</tr>
+			<tr>
+				<th>FailureTip</th>
+				<th><textarea name="failureTip" class="tbinput7" required="true" style="height:93%;"></textarea></th>
+			</tr>
+		</thead>
+	</table>
+</div>
+
+<div id="dlg-buttons" style="height: 22px;">
+	<div style="float: right">
+		<a href="javascript:void(0)" class="easyui-linkbutton actionbtn" iconCls="icon-undo" plain="true" onclick="cancel()">取消</a>
+	</div>
+	<div class="datagrid-btn-separator" style="float: right"></div>
+	<div class="datagrid-btn-separator" style="float: right"></div>
+	<div style="float: right;">
+		<a href="javascript:void(0)" class="easyui-linkbutton actionbtn" iconCls="icon-save" plain="true" onclick="save()">保存</a>
+	</div>
+</div>
+<style type="text/css">
+	#tb thead{width:100%;height:100%;}
+	#tb thead tr{
+		height:17%;}
+	#tb thead tr th{border:1px solid #2d2d2d;width:50%;padding:5px;}
+	#tb{width:100%;height:100%;}
+	#tb input {
+		width: 98%;
+	}
+	#tb textarea {
+		width: 98%;
+	}
+</style>
+<script>
+	$('#dgUpdate').edatagrid({
+		url: '/device/getUpdate',
+		loader: datagridLoader,
+		fit: true,
+		toolbar: '#toolbar2',
+		// pagination: true,
+		// pageSize: 20,
+		nowrap: false,
+		onClickRow: function (index, row) {
+			$('#dgUpdate').datagrid('options').queryParams = {
+				id: row.id,
+				version: row.version,
+				wVersion: row.wVersion,
+                modifyDesc: row.modifyDesc,
+                updateDesc: row.updateDesc,
+                updatePreTip: row.updatePreTip,
+                updatingTip: row.updatingTip,
+                failureTip: row.failureTip
+			};
+			$(".opbtn").linkbutton('enable');
+		}
+	});
+
+	$(function(){
+        $("#tb").children("thead").children("tr").children("th").children("input").focus(function(){
+            $(this).css("box-shadow","0px 0px 5px blue");
+        });
+        $("#tb").children("thead").children("tr").children("th").children("input").blur(function(){
+            $(this).css("box-shadow","none");
+        });
+        $("#tb").children("thead").children("tr").children("th").children("textarea").focus(function(){
+            $(this).css("box-shadow","0px 0px 5px blue");
+        });
+        $("#tb").children("thead").children("tr").children("th").children("textarea").blur(function(){
+            $(this).css("box-shadow","none");
+        });
+	});
+
+	function edit() {
+		var row = $("#dgUpdate").datagrid("getSelected");
+		$("#tb").form("load", row);
+		$("#dlg").dialog("open").dialog('setTitle', '编辑');
+	}
+
+	function insert() {
+		$("#tb").children("thead").children("tr").children("th").children("input").val(null);
+		$("#tb").children("thead").children("tr").children("th").children("input").css("box-shadow","none");
+		$("#tb").children("thead").children("tr").children("th").children("textarea").val(null);
+		$("#tb").children("thead").children("tr").children("th").children("textarea").css("box-shadow","none");
+
+		$("#dlg").dialog("open").dialog('setTitle', '添加');
+	}
+
+	function deleteRow() {
+		$.messager.confirm('确认', '确定删除吗？', function (confirm) {
+			if (confirm) {
+				var args = $('#dgUpdate').datagrid('options').queryParams;
+				$.post("/device/removeUp", args, function () {
+					$('#dgUpdate').datagrid("reload");
+				});
+			}
+		});
+	}
+
+	function save() {
+		var title = $(".panel-title").html();
+		var args = {
+			"version": $.trim($(".tbinput2").val()),
+			"wVersion": $.trim($(".tbinput1").val()),
+			"modifyDesc": $.trim($(".tbinput3").val()),
+			"updateDesc": $.trim($(".tbinput6").val()),
+			"updatePreTip": $.trim($(".tbinput5").val()),
+			"updatingTip": $.trim($(".tbinput4").val()),
+			"failureTip": $.trim($(".tbinput7").val())
+		};
+		if (judge(args)) {
+
+            args.id = $('#dgUpdate').datagrid('options').queryParams.id;
+			if (title == "编辑") {
+				$.post("/device/updateUp", args, function (data) {
+					if (data.errmsg != null)
+						layerNoShadeAlert(data.errmsg);
+					$('#dgUpdate').datagrid("reload");
+				});
+			} else {
+				$.post("/device/saveUp", args, function (data) {
+					if (data.errmsg != null)
+						layerNoShadeAlert(data.errmsg);
+					$('#dgUpdate').datagrid("reload");
+				});
+			}
+			$("#dlg").dialog("close");
+		}
+	}
+
+	function cancel() {
+		$("#dlg").dialog("close");
+	}
+
+	function judge(args) {
+		var temp = true;
+		$.each(args, function (index, param) {
+			if (param == null || param == "") {
+				layer.msg('数据不能为空');
+				temp = false;
+			}
+		});
+
+		if (temp == false) {
+			return false;
+		}
+
+		return temp;
+	}
+</script>
