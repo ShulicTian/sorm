@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="GB18030"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="shulictian.ssm.mapper.AdminMapper">
+
+	<!-- 获取激活码 -->
+	<select id="goGetAdmin" parameterType="string" resultType="string">
+		select code from code where code=#{code} and status=0
+	</select>
+
+	<!-- 更新激活码状态为已使用 -->
+	<update id="updateCodeStatus" parameterType="string">
+		update code set
+		status=1 where code=#{code}
+	</update>
+
+	<!-- 将用户升级为管理员 -->
+	<update id="updateUserType" parameterType="int">
+		update user set type=1
+		where id=#{id}
+	</update>
+
+
+
+	<!-- 管理员获取所有待审核的帖子 -->
+	<select id="getAdTopByState" parameterType="int"
+		resultMap="shulictian.ssm.mapper.TopicMapper.adminTop">
+		select t.* from topic t,topstate ts where t.id=ts.top_id and
+		t.state=#{state} order by t.sendTime asc
+	</select>
+
+	<!-- 管理员更新帖子状态 -->
+	<update id="upTopStateByState" parameterType="map">
+		update topic set
+		state=#{state} where id=#{topId}
+	</update>
+
+	<select id="getUserByType" parameterType="int" resultType="user">
+		select * from user where type=#{type} order by regTime desc
+	</select>
+
+	<!-- 管理员获取所有用户 <select id="getUserAdmin" resultType="user"> select * from 
+		user where type=0 order by regTime desc </select> -->
+
+	<!-- 超级管理员获取所有管理员用户 <select id="goSuperAdmin" resultType="user"> select 
+		* from user where type=1 order by regTime desc </select> -->
+
+	<!-- 查询被封的用户 <select id="punishUsers" resultType="user"> select * from user 
+		where type=3 order by regTime desc </select> -->
+
+	<!-- 超级管理员撤销普通管理员职位 <update id="revocation" parameterType="int"> update 
+		user set type=0 where id=#{id} </update> -->
+
+	<!-- 对用户进行封号处理 <update id="punish" parameterType="int"> update user set 
+		type=3 where id=#{id} </update> -->
+
+	<update id="upUserTypeById" parameterType="map">
+		update user set type=#{type}
+		where
+		id=#{id}
+	</update>
+
+</mapper>

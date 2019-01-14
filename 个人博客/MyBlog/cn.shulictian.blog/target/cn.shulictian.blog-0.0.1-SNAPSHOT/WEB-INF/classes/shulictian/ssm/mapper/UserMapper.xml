@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="shulictian.ssm.mapper.UserMapper">
+
+	<resultMap type="userCustom" id="userCus">
+		<id column="id" property="id" />
+		<result column="type" property="type" />
+		<result column="nickname" property="nickName" />
+		<result column="lookNum" property="lookNum" />
+		<result column="ranking" property="ranking" />
+		<result column="gitHome" property="gitHome" />
+	</resultMap>
+
+	<!-- 用户注册入库 -->
+	<insert id="saveUser" parameterType="user" useGeneratedKeys="true"
+		keyProperty="id">
+		insert into user(username,password,regTime)
+		value(#{userName},#{passWord},#{regTime})
+	</insert>
+
+	<insert id="createAdd" parameterType="int">
+		insert into proadds
+		(user_id) value(#{userId})
+	</insert>
+
+	<!-- 创建userstate -->
+	<insert id="createState" parameterType="int">
+		insert into
+		userstate(user_id) value(#{id})
+	</insert>
+
+	<update id="updateState" parameterType="map">
+		<if test="map!=null">
+			update userstate
+			<set>
+				<if test="map.lookNum!=null">
+					lookNum=#{lookNum},
+				</if>
+				<if test="map.ranking!=null">
+					ranking=#{ranking},
+				</if>
+			</set>
+			where user_id=#{id}
+		</if>
+	</update>
+
+	<!-- 根据账号密码获取用户 -->
+	<select id="getUser" parameterType="user" resultType="user">
+		select *
+		from user where username=#{userName} and password=#{passWord}
+	</select>
+
+	<!-- 更新昵称 <update id="upUser" parameterType="user"> update user set nickName=#{nickName} 
+		where id=#{id} </update> -->
+
+	<!-- 更新user -->
+	<update id="upUser" parameterType="map">
+		update user
+		<set>
+			<if test="newPwd!=null">
+				password=#{newPwd}
+			</if>
+			<if test="nickName!=null">
+				nickName=#{nickName}
+			</if>
+			<if test="type!=null">
+				type=#{type}
+			</if>
+		</set>
+		where id=#{id}
+	</update>
+
+	<!-- 获取所有用户的用户名 <select id="getAllUserName" resultType="string"> select 
+		username from user </select> -->
+
+	<!-- 根据id查找User -->
+	<select id="getUserById" parameterType="int" resultType="user">
+		select
+		id,nickname from user where id=#{id}
+	</select>
+
+	<!-- 根据id查找UserCus -->
+	<select id="findUser" parameterType="int" resultMap="userCus">
+		select
+		u.id,u.nickname,u.type,us.* from user u,userstate us where u.id=#{id}
+		and us.user_id=u.id
+	</select>
+
+	<!-- 根据id查找TopicId -->
+	<select id="findTopicIds" parameterType="int" resultType="int">
+		select
+		id from topic where user_id = #{id}
+	</select>
+
+	<!-- 根据id查找用户粉丝 -->
+	<select id="findFans" parameterType="int" resultType="user">
+		select
+		id,nickname,username from user where id in(select fans_id from attention
+		where user_id=#{id} order by createTime desc)
+	</select>
+
+	<!-- 关注 -->
+	<insert id="attention" parameterType="map">
+		insert into
+		attention(user_id,fans_id,createTime)
+		value(#{userId},#{fansId},#{createTime})
+	</insert>
+
+	<!-- 取消关注 -->
+	<delete id="cancelAtt" parameterType="map">
+		delete from attention where
+		user_id=#{userId} and fans_id=#{fansId}
+	</delete>
+
+	<!-- 判断关注 -->
+	<select id="judAtt" parameterType="map" resultType="int">
+		select
+		count(*) from attention where user_id=#{userId} and fans_id=#{fansId}
+	</select>
+
+	<!-- 根据id查找用户已关注的用户 -->
+	<select id="findAtt" parameterType="int" resultType="user">
+		select
+		id,nickname,username from user where id in(select user_id from
+		attention where fans_id=#{id} order by createTime desc)
+	</select>
+
+	<insert id="createUsermsg" parameterType="int">
+		insert into
+		usermsg(user_id) value(#{userId})
+	</insert>
+
+	<!-- 更新用户资料 -->
+	<update id="updateUsermsg" parameterType="userMessage">
+		update usermsg
+		<set>
+			<if test="name!=null">
+				name=#{name},
+			</if>
+			<if test="birth!=null">
+				birth=#{birth},
+			</if>
+			<if test="age!=null">
+				age=#{age},
+			</if>
+			<if test="idCard!=null">
+				idCard=#{idCard},
+			</if>
+			<if test="province!=null">
+				province=#{province},
+			</if>
+			<if test="city!=null">
+				city=#{city},
+			</if>
+			<if test="county!=null">
+				county=#{county},
+			</if>
+			<if test="sex!=null">
+				sex=#{sex},
+			</if>
+			<if test="phone!=null">
+				phone=#{phone},
+			</if>
+			<if test="descs!=null">
+				descs=#{descs},
+			</if>
+			ageState=#{ageState},
+			msgState=#{msgState}
+		</set>
+		where user_id=#{userId}
+	</update>
+
+	<select id="findUsermsg" parameterType="int" resultType="userMessage">
+		select *
+		from usermsg where user_id=#{userId}
+	</select>
+
+	<!-- 获取项目信息 -->
+	<select id="findPro" parameterType="int" resultType="userProMsg">
+		select
+		id,proadd address,proName name,descs from proadds where
+		user_id=#{userId}
+	</select>
+
+	<!-- 插入项目信息 -->
+	<insert id="addPro" parameterType="userProMsg">
+		insert into
+		proadds(user_id,proadd,proName,descs)
+		value(#{userId},#{address},#{name},#{descs})
+	</insert>
+
+	<!-- 更新项目信息 -->
+	<update id="upPro" parameterType="userProMsg">
+		update proadds set
+		proadd=#{address},proName=#{name},descs=#{descs} where
+		user_id=#{userId} and id=#{id}
+	</update>
+
+	<!-- 获取git主页 -->
+	<select id="findGit" parameterType="int" resultType="string">
+		select
+		gitHome from userstate where user_id=#{userId}
+	</select>
+
+	<!-- 更新git主页 -->
+	<update id="upGit" parameterType="map">
+		update userstate set
+		gitHome=#{gitHome} where user_id=#{userId}
+	</update>
+
+	<!-- 获取个性签名 -->
+	<select id="getSdf" parameterType="int" resultType="string">
+		select descs
+		from usermsg where user_id=#{userId}
+	</select>
+
+	<!-- 修改个性签名 -->
+	<update id="upSdf" parameterType="map">
+		update usermsg set
+		descs=#{descs} where user_id=#{userId}
+	</update>
+
+</mapper>

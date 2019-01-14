@@ -1,0 +1,63 @@
+@charset "UTF-8";
+
+body{margin:0px; padding:0px;background-image:url("../img/back.jpg");}
+
+/* index */
+#tops{width:75%;height:700px;background-color: white;float:right;margin-right: 18px;}
+
+#tops{border:1px gray solid; border-radius:5px;}
+
+#title{width:100%; height:30px;background-color:#ACD6FF;}
+
+#title span{display:block;height:30px;float:left;line-height:30px;}
+
+#top{height: 40px;}
+
+#top a{text-decoration:none;}
+
+#top a:hover{color:blue;}
+
+#top span{height:40px;text-align:center;display:block;float:left;line-height:40px;}
+
+#titles{height:40px;color:black;font-size:20px;width:25%;display:block;float:left;line-height:40px;text-align:center;}
+
+#topback{background-image:url("../img/topback.png");width:100%;height:640px;}
+
+#pages{margin:auto;text-align:center;}
+
+#pages a{text-decoration:none;display:inline;width:50px;margin-right:15px;color:black;}
+
+#pages a:hover{text-decoration:underline;color:blue;}
+
+/* oneAdmin */
+#oneHead{width:100%;height:30px;padding-top:20px;margin-top:30px;}
+
+#oneHead ul{width:40%;height:30px;margin:auto;padding:auto;}
+
+#oneHead ul li{float:left;list-style:none;margin-right:5px;border:1px solid gray;height:30px;width:20%;}
+
+#oneHead ul li a{display:block;text-align:center;height:30px;line-height:30px;text-decoration:none;color:black;}
+
+#oneHead ul li a:hover{color:blue;background-color:#D2E9FF;}
+
+/* auditTop */
+#auditHead{width:40%;height:30px;margin:auto;padding-left:250px;}
+
+#auditHead ul{width:100%;height:30px;margin:auto;padding:auto;}
+
+#auditHead ul li{float:left;list-style:none;margin-right:5px;border:1px solid gray;height:30px;width:20%;}
+
+#auditHead ul li a{display:block;text-align:center;height:30px;line-height:30px;text-decoration:none;color:black;background-color:#ACD6FF;}
+
+#auditHead ul li a:hover{color:blue;background:none;}
+
+/* auditTop */
+#superHead{width:40%;height:30px;margin:auto;padding-left:200px;}
+
+#superHead ul{width:100%;height:30px;margin:auto;padding:auto;}
+
+#superHead ul li{float:left;list-style:none;margin-right:5px;border:1px solid gray;height:30px;width:18%;}
+
+#superHead ul li a{display:block;text-align:center;height:30px;line-height:30px;text-decoration:none;color:black;background-color:#ACD6FF;}
+
+#superHead ul li a:hover{color:blue;background:none;}
