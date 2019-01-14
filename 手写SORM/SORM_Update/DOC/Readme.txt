@@ -1,2 +1,0 @@
-1.在src下建立db.properties
-2.
