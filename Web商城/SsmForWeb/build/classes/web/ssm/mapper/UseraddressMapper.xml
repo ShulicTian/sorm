@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="web.ssm.mapper.UseraddressMapper">
+	
+	<select id="getAdd" parameterType="int" resultType="useraddress">
+	
+		select * from useraddress where user_id=#{id}
+	
+	</select>
+	
+	<insert id="Add" parameterType="useraddress" keyProperty="id" useGeneratedKeys="true">
+		insert into useraddress(name,phonenumber,ip,user_id) value(#{name},#{phonenumber},#{ip},#{user.id})
+	</insert>
+	
+	<update id="setAdd" parameterType="useraddress">
+		update useraddress set name=#{name},phonenumber=#{phonenumber},ip=#{ip} where user_id=#{user.id}
+	</update>
+
+</mapper>
